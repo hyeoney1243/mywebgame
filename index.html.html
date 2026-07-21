@@ -1,0 +1,694 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>두더지 잡기 게임</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            user-select: none;
+            -webkit-user-select: none;
+        }
+
+        body {
+            margin: 0;
+            padding: 20px;
+            font-family: 'Pretendard', 'Apple SD Gothic Neo', sans-serif;
+            background: linear-gradient(135deg, #8bc34a, #2e7d32);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            color: #333;
+            cursor: pointer;
+            transition: background 0.5s ease;
+        }
+
+        /* 피버 모드 배경 스타일 */
+        body.fever-mode {
+            background: linear-gradient(135deg, #ff1744, #d50000);
+            animation: pulseBg 0.8s infinite alternate;
+        }
+
+        @keyframes pulseBg {
+            0% { background: linear-gradient(135deg, #ff1744, #d50000); }
+            100% { background: linear-gradient(135deg, #ff5252, #ff1744); }
+        }
+
+        .game-container {
+            background-color: rgba(255, 255, 255, 0.95);
+            padding: 25px 30px;
+            border-radius: 24px;
+            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.3);
+            text-align: center;
+            max-width: 600px;
+            width: 100%;
+            position: relative;
+            transition: transform 0.3s ease;
+        }
+
+        /* 피버 모드 용 컨테이너 효과 */
+        .game-container.fever {
+            border: 4px solid #ffea00;
+            box-shadow: 0 0 30px #ffea00;
+        }
+
+        h1 {
+            margin: 0 0 15px 0;
+            color: #3e2723;
+            font-size: 2rem;
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.1);
+        }
+
+        /* 피버 배너 */
+        .fever-banner {
+            display: none;
+            font-size: 1.3rem;
+            font-weight: 900;
+            color: #d50000;
+            background: #fff59d;
+            border: 2px dashed #fbc02d;
+            padding: 6px 0;
+            border-radius: 12px;
+            margin-bottom: 15px;
+            animation: blink 0.5s infinite alternate;
+        }
+
+        @keyframes blink {
+            from { opacity: 0.8; transform: scale(0.98); }
+            to { opacity: 1; transform: scale(1.02); }
+        }
+
+        /* 난이도 선택 영역 */
+        .difficulty-container {
+            margin-bottom: 15px;
+            background: #f1f8e9;
+            padding: 12px 15px;
+            border-radius: 16px;
+            border: 2px solid #c5e1a5;
+        }
+
+        .difficulty-title {
+            font-weight: bold;
+            color: #33691e;
+            margin-bottom: 8px;
+            font-size: 0.95rem;
+        }
+
+        .difficulty-buttons {
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+        }
+
+        .diff-btn {
+            background: #ffffff;
+            border: 2px solid #aed581;
+            color: #33691e;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-weight: bold;
+            font-size: 0.9rem;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .diff-btn:hover {
+            background: #dce775;
+        }
+
+        .diff-btn.active {
+            background: #558b2f;
+            color: white;
+            border-color: #33691e;
+            box-shadow: 0 3px 6px rgba(0,0,0,0.2);
+        }
+
+        /* 점수 및 상태 표시판 */
+        .status-board {
+            display: flex;
+            justify-content: space-around;
+            background: #fff8e1;
+            padding: 10px 15px;
+            border-radius: 16px;
+            border: 2px solid #ffe082;
+            margin-bottom: 20px;
+            font-size: 1.1rem;
+            font-weight: bold;
+        }
+
+        .status-item {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .score-val { color: #e65100; font-size: 1.4rem; }
+        .combo-val { color: #d81b60; font-size: 1.4rem; }
+        .time-val { color: #1565c5; font-size: 1.4rem; }
+
+        /* 7개 구멍 레이아웃 */
+        .board {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+
+        .hole {
+            width: 105px;
+            height: 105px;
+            background: #5d4037;
+            border-radius: 50%;
+            position: relative;
+            overflow: hidden;
+            border: 6px solid #3e2723;
+            box-shadow: inset 0 10px 15px rgba(0,0,0,0.6);
+        }
+
+        .hole::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            height: 25px;
+            background: #4caf50;
+            border-top: 4px solid #388e3c;
+            border-radius: 0 0 50px 50px;
+            z-index: 2;
+        }
+
+        /* 두더지 기본 구조 */
+        .mole {
+            width: 78px;
+            height: 82px;
+            background: #795548;
+            border-radius: 40px 40px 15px 15px;
+            position: absolute;
+            bottom: -90px;
+            left: 50%;
+            transform: translateX(-50%);
+            transition: bottom 0.2s ease-out;
+            cursor: pointer;
+            z-index: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding-top: 10px;
+            border: 3px solid #4e342e;
+        }
+
+        /* 두더지 등장 */
+        .mole.up { bottom: 8px; }
+
+        /* 일반 두더지 얼굴 */
+        .mole-eyes { display: flex; gap: 16px; margin-top: 8px; }
+        .eye {
+            width: 10px; height: 10px; background-color: #000;
+            border-radius: 50%; position: relative;
+        }
+        .eye::after {
+            content: ''; position: absolute; top: 2px; left: 2px;
+            width: 3px; height: 3px; background-color: #fff; border-radius: 50%;
+        }
+        .mole-snout {
+            width: 32px; height: 22px; background: #d7ccc8;
+            border-radius: 12px; margin-top: 4px; display: flex;
+            justify-content: center; align-items: center;
+        }
+        .mole-nose { width: 14px; height: 10px; background: #d81b60; border-radius: 6px; margin-bottom: 4px; }
+
+        /* ⭐ 황금 두더지 스타일 */
+        .mole.golden {
+            background: linear-gradient(180deg, #ffd700, #ffab00);
+            border-color: #ff6f00;
+            box-shadow: 0 0 15px #ffd700;
+        }
+        .mole.golden .mole-snout { background: #fff8e1; }
+        .mole.golden .mole-nose { background: #ff6f00; }
+
+        /* 💣 폭탄 두더지 스타일 */
+        .mole.bomb {
+            background: #212121;
+            border-color: #000;
+        }
+        .mole.bomb .eye { background: #ff1744; }
+        .mole.bomb .mole-snout { background: #424242; }
+        .mole.bomb .mole-nose { background: #ff5252; }
+        .mole.bomb::before {
+            content: '💣';
+            position: absolute;
+            top: -12px;
+            font-size: 1.2rem;
+            animation: fuse 0.3s infinite alternate;
+        }
+
+        /* 타격 효과 */
+        .mole.hit {
+            transform: translateX(-50%) scale(0.9);
+            transition: transform 0.1s;
+        }
+        .mole.hit .eye { height: 3px; border-radius: 0; margin-top: 4px; }
+
+        /* 시작 버튼 */
+        .start-btn {
+            background: linear-gradient(180deg, #ff9800, #f57c00);
+            color: white;
+            border: none;
+            padding: 14px 32px;
+            font-size: 1.2rem;
+            font-weight: bold;
+            border-radius: 50px;
+            cursor: pointer;
+            box-shadow: 0 6px 0 #b26a00, 0 8px 15px rgba(0,0,0,0.2);
+            transition: all 0.1s ease;
+        }
+        .start-btn:hover { background: linear-gradient(180deg, #ffa726, #fb8c00); }
+        .start-btn:active { transform: translateY(4px); box-shadow: 0 2px 0 #b26a00, 0 4px 10px rgba(0,0,0,0.2); }
+        .start-btn:disabled { background: #ccc; box-shadow: 0 4px 0 #999; cursor: not-allowed; transform: none; }
+
+        /* 점수 팝업 메시지 */
+        .score-popup {
+            position: absolute;
+            font-weight: 900;
+            font-size: 1.5rem;
+            animation: popup 0.6s ease-out forwards;
+            pointer-events: none;
+            z-index: 10;
+            text-shadow: 2px 2px 0 #fff;
+        }
+        .score-popup.plus { color: #ff3d00; }
+        .score-popup.bonus { color: #ffab00; font-size: 1.8rem; }
+        .score-popup.minus { color: #d50000; font-size: 1.8rem; text-shadow: 2px 2px 0 #000; }
+
+        @keyframes popup {
+            0% { opacity: 1; transform: translateY(0) scale(1); }
+            100% { opacity: 0; transform: translateY(-40px) scale(1.3); }
+        }
+
+        /* 결과 모달 */
+        .result-modal {
+            display: none;
+            position fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0, 0, 0, 0.6);
+            justify-content: center; align-items: center;
+            z-index: 100;
+        }
+        .result-content {
+            background: white; padding: 30px 40px; border-radius: 20px;
+            text-align: center; box-shadow: 0 10px 25px rgba(0,0,0,0.3);
+            max-width: 340px; width: 85%;
+            animation: popIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+        @keyframes popIn {
+            0% { transform: scale(0.7); opacity: 0; }
+            100% { transform: scale(1); opacity: 1; }
+        }
+        .result-title { font-size: 1.5rem; color: #3e2723; margin-bottom: 10px; font-weight: bold; }
+        .result-score { font-size: 1.1rem; color: #555; margin-bottom: 5px; }
+        .result-diff { font-size: 0.95rem; color: #777; margin-bottom: 15px; }
+        .result-evaluation {
+            font-size: 2rem; font-weight: 900; color: #e65100;
+            margin-bottom: 20px; padding: 10px; background: #fff8e1;
+            border-radius: 12px; border: 2px dashed #ffe082;
+            text-transform: uppercase;
+        }
+        .close-btn {
+            background: #2e7d32; color: white; border: none;
+            padding: 10px 24px; font-size: 1rem; font-weight: bold;
+            border-radius: 25px; cursor: pointer;
+        }
+
+        @media (max-width: 480px) {
+            .hole { width: 80px; height: 80px; }
+            .mole { width: 60px; height: 65px; }
+            .status-board { font-size: 0.9rem; }
+            .diff-btn { padding: 6px 12px; font-size: 0.8rem; }
+        }
+    </style>
+</head>
+<body>
+
+    <div id="game-container" class="game-container">
+        <h1>🔨 두더지 잡기</h1>
+
+        <div id="fever-banner" class="fever-banner">✨ FEVER TIME! 황금 두더지만 출현! ✨</div>
+
+        <!-- 난이도 선택 -->
+        <div class="difficulty-container">
+            <div class="difficulty-title">🎯 난이도 선택</div>
+            <div class="difficulty-buttons">
+                <button class="diff-btn" data-diff="easy">Easy (60초)</button>
+                <button class="diff-btn active" data-diff="normal">Normal (50초)</button>
+                <button class="diff-btn" data-diff="hard">Hard (40초)</button>
+            </div>
+        </div>
+
+        <div class="status-board">
+            <div class="status-item">
+                <span>점수:</span>
+                <span id="score" class="score-val">0</span>
+            </div>
+            <div class="status-item">
+                <span>콤보:</span>
+                <span id="combo" class="combo-val">0</span>
+            </div>
+            <div class="status-item">
+                <span>시간:</span>
+                <span id="time" class="time-val">50</span>초
+            </div>
+        </div>
+
+        <!-- 7개 구멍 -->
+        <div class="board">
+            <div class="hole"><div class="mole"></div></div>
+            <div class="hole"><div class="mole"></div></div>
+            <div class="hole"><div class="mole"></div></div>
+            <div class="hole"><div class="mole"></div></div>
+            <div class="hole"><div class="mole"></div></div>
+            <div class="hole"><div class="mole"></div></div>
+            <div class="hole"><div class="mole"></div></div>
+        </div>
+
+        <button id="start-btn" class="start-btn">게임 시작!</button>
+    </div>
+
+    <!-- 결과 안내 모달 -->
+    <div id="result-modal" class="result-modal">
+        <div class="result-content">
+            <div class="result-title">🎮 게임 종료!</div>
+            <div class="result-diff">난이도: <span id="final-diff">Normal</span></div>
+            <div class="result-score">최종 점수: <b id="final-score">0</b>점</div>
+            <div id="result-eval" class="result-evaluation">not bad</div>
+            <button id="close-btn" class="close-btn">확인</button>
+        </div>
+    </div>
+
+    <script>
+        // DOM 요소
+        const gameContainer = document.getElementById('game-container');
+        const feverBanner = document.getElementById('fever-banner');
+        const holes = document.querySelectorAll('.hole');
+        const moles = document.querySelectorAll('.mole');
+        const scoreDisplay = document.getElementById('score');
+        const comboDisplay = document.getElementById('combo');
+        const timeDisplay = document.getElementById('time');
+        const startBtn = document.getElementById('start-btn');
+        const diffBtns = document.querySelectorAll('.diff-btn');
+        
+        const resultModal = document.getElementById('result-modal');
+        const finalScoreDisplay = document.getElementById('final-score');
+        const finalDiffDisplay = document.getElementById('final-diff');
+        const resultEvalDisplay = document.getElementById('result-eval');
+        const closeBtn = document.getElementById('close-btn');
+
+        // 난이도 설정 (시간 조정: Easy 60s, Normal 50s, Hard 40s)
+        const diffSettings = {
+            easy: { time: 60, minSpeed: 600, maxSpeed: 1000, label: "Easy" },
+            normal: { time: 50, minSpeed: 600, maxSpeed: 1000, label: "Normal" },
+            hard: { time: 40, minSpeed: 600, maxSpeed: 1000, label: "Hard" }
+        };
+
+        let currentDiff = 'normal';
+        let lastHole = -1;
+        let timeUp = false;
+        let score = 0;
+        let combo = 0;
+        let timeLeft = 50;
+        let timerInterval = null;
+        let isFever = false;
+        let feverTimeout = null;
+
+        // 난이도 선택 이벤트
+        diffBtns.forEach(btn => {
+            btn.addEventListener('click', function() {
+                if (!startBtn.disabled) {
+                    diffBtns.forEach(b => b.classList.remove('active'));
+                    this.classList.add('active');
+                    currentDiff = this.dataset.diff;
+                    timeLeft = diffSettings[currentDiff].time;
+                    timeDisplay.textContent = timeLeft;
+                }
+            });
+        });
+
+        function randomTime(min, max) {
+            return Math.round(Math.random() * (max - min) + min);
+        }
+
+        function randomHole(holes) {
+            const idx = Math.floor(Math.random() * holes.length);
+            const hole = holes[idx];
+            if (idx === lastHole) return randomHole(holes);
+            lastHole = idx;
+            return hole;
+        }
+
+        // 두더지 종류 지정 (난이도 및 피버 모드 조건 적용)
+        function getMoleType() {
+            if (isFever) {
+                return 'golden'; // 피버 모드 시 100% 황금 두더지
+            }
+            
+            const rand = Math.random();
+
+            if (currentDiff === 'easy') {
+                // Easy 모드: 평상시 100% 일반 두더지만 출현
+                return 'normal';
+            } else if (currentDiff === 'normal') {
+                // Normal 모드: 황금두더지 25%, 폭탄두더지 15%, 일반두더지 60%
+                if (rand < 0.25) return 'golden';
+                if (rand < 0.40) return 'bomb';
+                return 'normal';
+            } else {
+                // Hard 모드: 황금 두더지가 폭탄 두더지보다 더 많이 나오도록 수정 (황금 30%, 폭탄 15%, 일반 55%)
+                if (rand < 0.30) return 'golden';
+                if (rand < 0.45) return 'bomb';
+                return 'normal';
+            }
+        }
+
+        // 피버 모드 시작 (3초 유지)
+        function startFever() {
+            isFever = true;
+            document.body.classList.add('fever-mode');
+            gameContainer.classList.add('fever');
+            feverBanner.style.display = 'block';
+
+            // 3초간 피버 유지
+            clearTimeout(feverTimeout);
+            feverTimeout = setTimeout(() => {
+                endFever();
+            }, 3000);
+        }
+
+        // 피버 모드 종료
+        function endFever() {
+            isFever = false;
+            document.body.classList.remove('fever-mode');
+            gameContainer.classList.remove('fever');
+            feverBanner.style.display = 'none';
+        }
+
+        // 두더지 출현
+        function popUpMole() {
+            if (timeUp) return;
+
+            const settings = diffSettings[currentDiff];
+            // 일반 상태: 0.6초 ~ 1.0초 (600ms ~ 1000ms)
+            // 피버 타임: 0.45초 ~ 0.8초 (450ms ~ 800ms)
+            let time = isFever 
+                ? randomTime(450, 800) 
+                : randomTime(settings.minSpeed, settings.maxSpeed);
+
+            const hole = randomHole(holes);
+            const mole = hole.querySelector('.mole');
+            const type = getMoleType();
+
+            // 타입별 클래스 초기화
+            mole.className = 'mole';
+            if (type === 'golden') mole.classList.add('golden');
+            if (type === 'bomb') mole.classList.add('bomb');
+
+            mole.dataset.type = type;
+            mole.classList.add('up');
+
+            const timeout = setTimeout(() => {
+                mole.classList.remove('up');
+                
+                // 일반/황금 두더지를 놓치면 콤보 리셋
+                if (mole.dataset.type !== 'bomb' && !mole.classList.contains('hit')) {
+                    resetCombo();
+                }
+
+                if (!timeUp) popUpMole();
+            }, time);
+
+            mole.dataset.timeoutId = timeout;
+        }
+
+        function resetCombo() {
+            combo = 0;
+            comboDisplay.textContent = combo;
+        }
+
+        // 두더지 잡기 클릭
+        function whack(e) {
+            if (!e.isTrusted) return;
+
+            const mole = this;
+            if (!mole.classList.contains('up') || mole.classList.contains('hit')) return;
+
+            const type = mole.dataset.type;
+            clearTimeout(mole.dataset.timeoutId);
+
+            mole.classList.add('hit');
+
+            if (type === 'bomb') {
+                // 💣 폭탄 두더지: -2점, -2초 차감, 콤보 리셋
+                score = Math.max(0, score - 2);
+                timeLeft = Math.max(0, timeLeft - 2);
+                timeDisplay.textContent = timeLeft;
+                resetCombo();
+                showScorePopup(e.clientX, e.clientY, '-2점!', 'minus');
+            } else if (type === 'golden') {
+                // ⭐ 황금 두더지: +3점, 콤보 상승
+                score += 3;
+                combo++;
+                showScorePopup(e.clientX, e.clientY, '+3점! ⭐', 'bonus');
+            } else {
+                // 🤎 일반 두더지: +1점, 콤보 상승
+                score += 1;
+                combo++;
+                showScorePopup(e.clientX, e.clientY, '+1', 'plus');
+            }
+
+            scoreDisplay.textContent = score;
+            comboDisplay.textContent = combo;
+
+            // 5콤보 달성 시 피버 모드 발동
+            if (combo >= 5 && !isFever) {
+                startFever();
+            }
+
+            setTimeout(() => {
+                mole.classList.remove('up');
+                mole.classList.remove('hit');
+                if (!timeUp) popUpMole();
+            }, 200);
+        }
+
+        // 점수 팝업 텍스트 연출
+        function showScorePopup(x, y, text, styleClass) {
+            const popup = document.createElement('div');
+            popup.className = `score-popup ${styleClass}`;
+            popup.textContent = text;
+            popup.style.left = `${x - 20}px`;
+            popup.style.top = `${y - 30}px`;
+
+            document.body.appendChild(popup);
+            setTimeout(() => popup.remove(), 600);
+        }
+
+        // 두더지 UI 생성
+        function buildMoleUI() {
+            moles.forEach(mole => {
+                const eyes = document.createElement('div');
+                eyes.className = 'mole-eyes';
+                
+                const eye1 = document.createElement('div'); eye1.className = 'eye';
+                const eye2 = document.createElement('div'); eye2.className = 'eye';
+                eyes.appendChild(eye1); eyes.appendChild(eye2);
+
+                const snout = document.createElement('div');
+                snout.className = 'mole-snout';
+                const nose = document.createElement('div');
+                nose.className = 'mole-nose';
+                snout.appendChild(nose);
+
+                mole.appendChild(eyes);
+                mole.appendChild(snout);
+
+                mole.addEventListener('click', whack);
+                mole.addEventListener('touchstart', function(e) {
+                    e.preventDefault();
+                    whack.call(this, e.touches[0]);
+                });
+            });
+        }
+
+        // 결과 모달 및 점수 기준 리액션 판정
+        function showResultModal() {
+            finalScoreDisplay.textContent = score;
+            finalDiffDisplay.textContent = diffSettings[currentDiff].label;
+
+            // 점수 구간별 판정
+            if (score >= 50) {
+                resultEvalDisplay.textContent = "excellent 🔥";
+            } else if (score >= 40) {
+                resultEvalDisplay.textContent = "good 👍";
+            } else if (score >= 30) {
+                resultEvalDisplay.textContent = "not bad 🙂";
+            } else if (score >= 1) {
+                resultEvalDisplay.textContent = "bad 😢";
+            } else {
+                resultEvalDisplay.textContent = "try again 😅";
+            }
+
+            resultModal.style.display = 'flex';
+        }
+
+        closeBtn.addEventListener('click', () => {
+            resultModal.style.display = 'none';
+        });
+
+        // 게임 시작
+        function startGame() {
+            const settings = diffSettings[currentDiff];
+            score = 0;
+            combo = 0;
+            timeLeft = settings.time;
+            timeUp = false;
+            
+            scoreDisplay.textContent = 0;
+            comboDisplay.textContent = 0;
+            timeDisplay.textContent = timeLeft;
+            startBtn.disabled = true;
+
+            endFever();
+            diffBtns.forEach(btn => btn.style.pointerEvents = 'none');
+            resultModal.style.display = 'none';
+
+            clearInterval(timerInterval);
+            timerInterval = setInterval(() => {
+                timeLeft--;
+                timeDisplay.textContent = timeLeft;
+
+                if (timeLeft <= 0) {
+                    clearInterval(timerInterval);
+                    timeUp = true;
+                    startBtn.disabled = false;
+                    endFever();
+                    
+                    diffBtns.forEach(btn => btn.style.pointerEvents = 'auto');
+                    moles.forEach(mole => mole.classList.remove('up'));
+                    
+                    setTimeout(() => {
+                        showResultModal();
+                    }, 300);
+                }
+            }, 1000);
+
+            popUpMole();
+        }
+
+        startBtn.addEventListener('click', startGame);
+        buildMoleUI();
+    </script>
+</body>
+</html>
